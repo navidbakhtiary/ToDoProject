@@ -34,7 +34,8 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/"
+            "App\\": "app/",
+            "NavidBakhtiary\\ToDo\\": "packages/navidbakhtiary/todo/src" 
         },
         "classmap": [
             "database/seeds",
