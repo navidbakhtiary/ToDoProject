@@ -23,6 +23,7 @@ class ToDoServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        $this->loadMigrationsFrom(dirname(__DIR__, 1) . '/Database/Migrations');
         $this->loadRoutesFrom(dirname(__DIR__, 1) . '/Routes/routes.php');
     }
 }
