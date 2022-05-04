@@ -11,6 +11,14 @@
         <testsuite name="Feature">
             <directory suffix="Test.php">./tests/Feature</directory>
         </testsuite>
+
+        <testsuite name="NavidBakhtiary\ToDo\Tests\Feature">
+            <directory suffix="Test.php">./packages/navidbakhtiary/todo/tests/Feature</directory>
+        </testsuite>
+
+        <testsuite name="NavidBakhtiary\ToDo\Tests\Unit">
+            <directory suffix="Test.php">./packages/navidbakhtiary/todo/tests/Unit</directory>
+        </testsuite>
     </testsuites>
     <filter>
         <whitelist processUncoveredFilesFromWhitelist="true">
