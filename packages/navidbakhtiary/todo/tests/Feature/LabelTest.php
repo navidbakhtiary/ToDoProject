@@ -34,4 +34,13 @@ class LabelTest extends TestCase
         $response->assertStatus(HttpStatus::BadRequest)->assertJsonFragment(['name' => ["The name must be a string."]]);
         $this->assertDatabaseMissing('labels', ['name' => '1']);
     }
+
+    public function testCreateLabelByUnauthenticatedUser()
+    {
+        $label = factory(Label::class)->make();
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
+            postJson($this->api_prefix . 'add', ['name' => $label->name]);
+        $response->assertUnauthorized();
+        $this->assertDatabaseMissing('labels', ['name' => $label->name]);
+    }
 }
