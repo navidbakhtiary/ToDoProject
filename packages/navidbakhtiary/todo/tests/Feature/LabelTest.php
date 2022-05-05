@@ -27,7 +27,7 @@ class LabelTest extends TestCase
         $this->assertDatabaseHas('labels', ['name' => $label->name]);
     }
 
-    public function testUseInvalidInputForCreateLabelByAuthenticatedUser()
+    public function testAuthenticatedUserCanNotCreateLabelUsingInvalidInputData()
     {
         $user = factory(User::class)->create();
         $token = $user->createToken('test-token');
@@ -37,7 +37,7 @@ class LabelTest extends TestCase
         $this->assertDatabaseMissing('labels', ['name' => '1']);
     }
 
-    public function testCreateLabelByUnauthenticatedUser()
+    public function testUnauthenticatedUserCanNotCreateLabel()
     {
         $label = factory(Label::class)->make();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
@@ -46,7 +46,7 @@ class LabelTest extends TestCase
         $this->assertDatabaseMissing('labels', ['name' => $label->name]);
     }
 
-    public function testCreateExistedLabelByAuthenticatedUser()
+    public function testAuthenticatedUserCanNotCreateLabelUsingExistedName()
     {
         $user = factory(User::class)->create();
         $token = $user->createToken('test-token');
