@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use NavidBakhtiary\ToDo\Controllers;
 use NavidBakhtiary\ToDo\Controllers\LabelController;
 
 /*
@@ -15,4 +14,10 @@ use NavidBakhtiary\ToDo\Controllers\LabelController;
 |
 */
 
-Route::get('/a', [LabelController::class, 'index']);
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('todo')->group(function () {
+        Route::prefix('labels')->group(function () {
+            Route::post('/add', [LabelController::class, 'store']);
+        });
+    });
+});

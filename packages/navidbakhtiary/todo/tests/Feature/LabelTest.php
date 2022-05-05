@@ -13,6 +13,7 @@ class LabelTest extends TestCase
     use RefreshDatabase;
 
     private $api_prefix = '/todo/labels/';
+    private $bearer_prefix = 'Bearer ';
 
     public function testCreateLabelByAuthenticatedUser()
     {
@@ -20,9 +21,9 @@ class LabelTest extends TestCase
         $token = $user->createToken('test-token');
         $label = factory(Label::class)->make();
         $response = $this->
-            withHeaders(['Authorization' => 'Bearer ' . $token->plainTextToken])->
+            withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
             postJson($this->api_prefix . 'add', ['name' => $label->name]);
-        $response->assertStatus(HttpStatus::Created);
+        $response->assertCreated()->assertJsonFragment(['name' => $label->name]);
         $this->assertDatabaseHas('labels', ['name' => $label->name]);
     }
 }
