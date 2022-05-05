@@ -20,10 +20,18 @@ class LabelTest extends TestCase
         $user = factory(User::class)->create();
         $token = $user->createToken('test-token');
         $label = factory(Label::class)->make();
-        $response = $this->
-            withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
-            postJson($this->api_prefix . 'add', ['name' => $label->name]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->postJson($this->api_prefix . 'add', ['name' => $label->name]);
         $response->assertCreated()->assertJsonFragment(['name' => $label->name]);
         $this->assertDatabaseHas('labels', ['name' => $label->name]);
+    }
+
+    public function testUseInvalidInputForCreateLabelByAuthenticatedUser()
+    {
+        $user = factory(User::class)->create();
+        $token = $user->createToken('test-token');
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_prefix . 'add', ['name' => 1]);
+        $response->assertStatus(HttpStatus::BadRequest)->assertJsonFragment(['name' => ["The name must be a string."]]);
+        $this->assertDatabaseMissing('labels', ['name' => '1']);
     }
 }
