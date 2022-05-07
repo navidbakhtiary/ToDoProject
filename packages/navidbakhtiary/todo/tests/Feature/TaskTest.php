@@ -20,7 +20,8 @@ class TaskTest extends TestCase
         $user = factory(User::class)->create();
         $token = $user->createToken('test-token');
         $task = factory(Task::class)->make();
-        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->postJson($this->api_add, $task->toArray());
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_add, $task->toArray());
         $response->assertCreated()->assertJsonStructure(['data' => ['task' => ['user' => ['id', 'name'], 'title', 'description', 'status']]]);
         $this->assertDatabaseHas('tasks', array_merge(['user_id' => $user->id], $task->toArray()));
     }
@@ -37,4 +38,14 @@ class TaskTest extends TestCase
         $this->assertDatabaseMissing('tasks', ['user_id' => $user->id, 'title' => null, 'status' => 'Unknown']);
     }
 
+    public function testUnauthenticatedUserCanNotCreateTask()
+    {
+        $task = factory(Task::class)->make();
+        $existed_records_count = Task::count();
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
+            postJson($this->api_add, $task->toArray());
+        
+        $response->assertUnauthorized();
+        $this->assertTrue($existed_records_count == Task::count());
+    }
 }
