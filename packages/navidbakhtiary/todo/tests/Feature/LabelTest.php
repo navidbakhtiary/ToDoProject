@@ -12,7 +12,6 @@ class LabelTest extends TestCase
 {
     use RefreshDatabase;
 
-    private $api_prefix = '/todo/labels/';
     private $api_add = '/todo/labels/add';
     private $bearer_prefix = 'Bearer ';
 
