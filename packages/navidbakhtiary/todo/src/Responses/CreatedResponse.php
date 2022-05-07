@@ -5,6 +5,7 @@ namespace NavidBakhtiary\ToDo\Responses;
 use NavidBakhtiary\ToDo\Config\HttpStatus;
 use NavidBakhtiary\ToDo\Resources\DataResource;
 use NavidBakhtiary\ToDo\Resources\LabelResource;
+use NavidBakhtiary\ToDo\Resources\TaskResource;
 
 class CreatedResponse extends Response
 {
@@ -15,6 +16,16 @@ class CreatedResponse extends Response
             new DataResource([
                 'label' => new LabelResource($label)
             ]), 
+        );
+    }
+
+    public static function sendTask($task)
+    {
+        return self::send(
+            HttpStatus::Created,
+            new DataResource([
+                'task' => new TaskResource($task)
+            ]),
         );
     }
 }
