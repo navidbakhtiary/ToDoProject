@@ -77,4 +77,16 @@ class TaskTest extends TestCase
             assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
         $this->assertDatabaseHas('tasks', array_merge(['user_id' => $user_2->id], $task_2->toArray()));
     }
+
+    public function testAuthenticatedUserCanNotEditInformationUsingInvalidInputData()
+    {
+        $user = factory(User::class)->create();
+        $token = $user->createToken('test-token');
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_edit, ['task_id' => $task->id, 'title' => '', 'description' => null]);
+        $response->assertStatus(HttpStatus::BadRequest)->
+            assertJsonFragment(['title' => ["The title field is required."], 'description' => ["The description field is required."]]);
+        $this->assertDatabaseMissing('tasks', ['id' => $task->id, 'user_id' => $user->id, 'title' => '', 'description' => null]);
+    }
 }
