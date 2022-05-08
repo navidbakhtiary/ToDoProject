@@ -14,6 +14,7 @@ class TaskTest extends TestCase
 
     private $api_add = '/todo/task/add';
     private $api_edit = '/todo/task/edit';
+    private $api_status_switching = '/todo/task/status/switch';
     private $bearer_prefix = 'Bearer ';
 
     public function testCreateTaskByAuthenticatedUser()
@@ -88,6 +89,18 @@ class TaskTest extends TestCase
         $response->assertStatus(HttpStatus::BadRequest)->
             assertJsonFragment(['title' => ["The title field is required."], 'description' => ["The description field is required."]]);
         $this->assertDatabaseMissing('tasks', ['id' => $task->id, 'user_id' => $user->id, 'title' => '', 'description' => null]);
+    }
+
+    public function testAuthenticatedUserCanChangeStatusOfOwnTask()
+    {
+        $user = factory(User::class)->create();
+        $token = $user->createToken('test-token');
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_status_switching, ['task_id' => $task->id]);
+        $response->assertCreated()->
+            assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => 'Close']);
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => 'Close']);
     }
 
 }
