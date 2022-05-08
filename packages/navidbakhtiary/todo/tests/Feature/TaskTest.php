@@ -12,8 +12,8 @@ class TaskTest extends TestCase
 {
     use RefreshDatabase;
 
-    private $api_add = '/todo/tasks/add';
-    private $api_edit = '/todo/tasks/edit';
+    private $api_add = '/todo/task/add';
+    private $api_edit = '/todo/task/edit';
     private $bearer_prefix = 'Bearer ';
 
     public function testCreateTaskByAuthenticatedUser()
@@ -89,4 +89,5 @@ class TaskTest extends TestCase
             assertJsonFragment(['title' => ["The title field is required."], 'description' => ["The description field is required."]]);
         $this->assertDatabaseMissing('tasks', ['id' => $task->id, 'user_id' => $user->id, 'title' => '', 'description' => null]);
     }
+
 }

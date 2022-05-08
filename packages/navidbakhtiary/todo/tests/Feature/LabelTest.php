@@ -12,7 +12,7 @@ class LabelTest extends TestCase
 {
     use RefreshDatabase;
 
-    private $api_add = '/todo/labels/add';
+    private $api_add = '/todo/label/add';
     private $bearer_prefix = 'Bearer ';
 
     public function testCreateLabelByAuthenticatedUser()

@@ -17,10 +17,10 @@ use NavidBakhtiary\ToDo\Controllers\TaskController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('todo')->group(function () {
-        Route::prefix('labels')->group(function () {
+        Route::prefix('label')->group(function () {
             Route::post('/add', [LabelController::class, 'store']);
         });
-        Route::prefix('tasks')->group(function () {
+        Route::prefix('task')->group(function () {
             Route::post('/add', [TaskController::class, 'store']);
             Route::post('/edit', [TaskController::class, 'update']);
         });
