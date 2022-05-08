@@ -13,6 +13,7 @@ class TaskTest extends TestCase
     use RefreshDatabase;
 
     private $api_add = '/todo/tasks/add';
+    private $api_edit = '/todo/tasks/edit';
     private $bearer_prefix = 'Bearer ';
 
     public function testCreateTaskByAuthenticatedUser()
@@ -47,5 +48,19 @@ class TaskTest extends TestCase
         
         $response->assertUnauthorized();
         $this->assertTrue($existed_records_count == Task::count());
+    }
+
+    public function testAuthenticatedUserCanEditInformationOfOwnTask()
+    {
+        $user = factory(User::class)->create();
+        $token = $user->createToken('test-token');
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $alternative_task = factory(Task::class)->make();
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_edit, array_merge(['task_id' => $task->id], $alternative_task->toArray()));
+        $response->assertCreated()->
+            assertJsonStructure(['data' => ['task' => ['user' => ['id', 'name'], 'id', 'title', 'description', 'status']]])->
+            assertJsonFragment(['id' => $task->id, 'title' => $alternative_task->title, 'description' => $alternative_task->description]);
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'title' => $alternative_task->title, 'description' => $alternative_task->description]);
     }
 }
