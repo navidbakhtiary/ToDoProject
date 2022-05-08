@@ -2,7 +2,6 @@
 
 namespace NavidBakhtiary\ToDo\Controllers;
 
-use App\Rules\UserTaskExistence;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -48,6 +47,22 @@ class TaskController extends Controller
         $task = Task::find($request->task_id);
         if ($task->update($request->except(['task_id']))) 
         {
+            return CreatedResponse::sendTask($task);
+        }
+        return UnprocessableEntityResponse::sendMessage();
+    }
+
+    public function statusSwitching(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'task_id' => ['required', 'integer', new UserTaskExistenceRule()]
+        ]);
+        if ($validation->fails()) {
+            return BadRequestResponse::sendErrors($validation->errors()->messages());
+        }
+        $task = Task::find($request->task_id);
+        $new_status = Task::$statuses[abs(array_search($task->status, Task::$statuses) - 1)];
+        if ($task->update(['status' => $new_status])) {
             return CreatedResponse::sendTask($task);
         }
         return UnprocessableEntityResponse::sendMessage();

@@ -23,6 +23,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::prefix('task')->group(function () {
             Route::post('/add', [TaskController::class, 'store']);
             Route::post('/edit', [TaskController::class, 'update']);
+            Route::prefix('status')->group(function () {
+                Route::post('/switch', [TaskController::class, 'statusSwitching']);
+            });
         });
     });
 });
