@@ -22,6 +22,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         });
         Route::prefix('tasks')->group(function () {
             Route::post('/add', [TaskController::class, 'store']);
+            Route::post('/edit', [TaskController::class, 'update']);
         });
     });
 });
