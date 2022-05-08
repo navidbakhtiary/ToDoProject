@@ -95,12 +95,25 @@ class TaskTest extends TestCase
     {
         $user = factory(User::class)->create();
         $token = $user->createToken('test-token');
-        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());//status is Open
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
             postJson($this->api_status_switching, ['task_id' => $task->id]);
         $response->assertCreated()->
             assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => 'Close']);
         $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => 'Close']);
+    }
+
+    public function testAuthenticatedUserCanNotChangeStatusOfOtherUserTask()
+    {
+        $user_1 = factory(User::class)->create();
+        $user_2 = factory(User::class)->create();
+        $token_1 = $user_1->createToken('test-token');
+        $task_2 = $user_2->tasks()->create(factory(Task::class)->make()->toArray());//status is Open
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->
+            postJson($this->api_status_switching, ['task_id' => $task_2->id]);
+        $response->assertStatus(HttpStatus::BadRequest)->
+            assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
+        $this->assertDatabaseHas('tasks', ['id' => $task_2->id, 'status' => 'Open']);
     }
 
 }
