@@ -63,4 +63,18 @@ class TaskTest extends TestCase
             assertJsonFragment(['id' => $task->id, 'title' => $alternative_task->title, 'description' => $alternative_task->description]);
         $this->assertDatabaseHas('tasks', ['id' => $task->id, 'title' => $alternative_task->title, 'description' => $alternative_task->description]);
     }
+
+    public function testAuthenticatedUserCanNotEditInformationOfOtherUserTask()
+    {
+        $user_1 = factory(User::class)->create();
+        $user_2 = factory(User::class)->create();
+        $token_1 = $user_1->createToken('test-token');
+        $task_2 = $user_2->tasks()->create(factory(Task::class)->make()->toArray());
+        $alternative_task = factory(Task::class)->make();
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->
+            postJson($this->api_edit, array_merge(['task_id' => $task_2->id], $alternative_task->toArray()));
+        $response->assertStatus(HttpStatus::BadRequest)->
+            assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
+        $this->assertDatabaseHas('tasks', array_merge(['user_id' => $user_2->id], $task_2->toArray()));
+    }
 }
