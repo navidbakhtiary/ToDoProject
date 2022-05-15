@@ -6,6 +6,7 @@ use App\Models\User;
 use NavidBakhtiary\ToDo\Models\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use NavidBakhtiary\ToDo\Config\HttpStatus;
+use NavidBakhtiary\ToDo\Models\Label;
 use Tests\TestCase;
 
 class TaskLabelTest extends TestCase
@@ -24,7 +25,7 @@ class TaskLabelTest extends TestCase
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
             postJson($this->api_add, ['task_id' => $task->id, 'label_id' => $label->id]);
         $response->assertCreated()->
-            assertJsonStructure(['data' => ['task' => ['user' => ['id', 'name'], 'title', 'description', 'status', 'new label' => ['id', 'name']]]]);
+            assertJsonStructure(['data' => ['task label' => ['task' => ['user' => ['id', 'name'], 'title', 'description', 'status'], 'new label' => ['id', 'name']]]]);
         $this->assertDatabaseHas('task_label', ['task_id' => $task->id, 'label_id' => $label->id]);
     }
 }

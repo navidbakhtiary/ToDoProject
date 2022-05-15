@@ -11,6 +11,11 @@ class Task extends Model
 
     public static $statuses = ['Close', 'Open'];
 
+    public function labels()
+    {
+        return $this->belongsToMany(Label::class, TaskLabel::class);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
