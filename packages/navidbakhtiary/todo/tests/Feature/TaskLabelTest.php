@@ -43,4 +43,16 @@ class TaskLabelTest extends TestCase
             assertJsonFragment(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
         $this->assertTrue($existed_records_count == $task_2->labels()->count());
     }
+
+    public function testUnauthenticatedUserCanNotAddLabelToTask()
+    {
+        $user = factory(User::class)->create();
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $label = factory(Label::class)->create();
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
+            postJson($this->api_add, ['task_id' => $task->id, 'label_id' => $label->id]);
+        $existed_records_count = $task->labels()->count();
+        $response->assertUnauthorized();
+        $this->assertTrue($existed_records_count == $task->labels()->count());
+    }
 }
