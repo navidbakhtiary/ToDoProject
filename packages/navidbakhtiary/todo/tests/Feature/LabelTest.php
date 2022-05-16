@@ -4,6 +4,7 @@ namespace NavidBakhtiary\ToDo\Tests\Feature;
 
 use App\Models\User;
 use NavidBakhtiary\ToDo\Models\Label;
+use NavidBakhtiary\ToDo\Models\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use NavidBakhtiary\ToDo\Config\HttpStatus;
 use Tests\TestCase;
@@ -13,6 +14,7 @@ class LabelTest extends TestCase
     use RefreshDatabase;
 
     private $api_add = '/todo/label/add';
+    private $api_list = '/todo/label';
     private $bearer_prefix = 'Bearer ';
 
     public function testCreateLabelByAuthenticatedUser()
@@ -55,4 +57,19 @@ class LabelTest extends TestCase
         $response->assertStatus(HttpStatus::BadRequest)->assertJsonFragment(['name' => ["The name has already been taken."]]);
         $this->assertTrue(Label::where('name', $label->name)->count() == 1);
     }
+
+    public function testAuthenticatedUserCanGetListOfLabels()
+    {
+        $user = factory(User::class)->create();
+        $token = $user->createToken('test-token');
+        $task_1 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_2 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $label_1 = factory(Label::class)->create();
+        $label_2 = factory(Label::class)->create();
+        $task_1->labels()->attach($label_1->id);
+        $task_2->labels()->sync([$label_1->id, $label_2->id]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->getJson($this->api_list);
+        $response->assertOk()->assertJson(['data' => ['labels' => [['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2], ['id' => $label_2->id, 'name' => $label_2->name, 'tasks count' => 1]]]]);
+    }
+
 }
