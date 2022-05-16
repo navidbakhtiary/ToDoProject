@@ -19,6 +19,7 @@ use NavidBakhtiary\ToDo\Controllers\TaskLabelController;
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('todo')->group(function () {
         Route::prefix('label')->group(function () {
+            Route::get('/', [LabelController::class, 'index']);
             Route::post('/add', [LabelController::class, 'store']);
         });
         Route::prefix('task')->group(function () {

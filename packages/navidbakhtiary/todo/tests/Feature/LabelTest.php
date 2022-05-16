@@ -70,7 +70,18 @@ class LabelTest extends TestCase
         $task_2->labels()->sync([$label_1->id, $label_2->id]);
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
             getJson($this->api_list);
-        $response->assertOk()->assertJson(['data' => ['labels' => [['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2], ['id' => $label_2->id, 'name' => $label_2->name, 'tasks count' => 1]]]]);
+        $response->assertOk()->assertJson(
+            [
+                'data' => 
+                [
+                    'labels' => 
+                    [
+                        ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2],
+                        ['id' => $label_2->id, 'name' => $label_2->name, 'tasks count' => 1]
+                    ]
+                ]
+            ]
+        );
     }
 
     public function testAuthenticatedUserLabelsListNotIncludeNumberOfOtherUsersTasks()
