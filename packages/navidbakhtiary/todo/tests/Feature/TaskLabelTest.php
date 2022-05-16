@@ -55,4 +55,18 @@ class TaskLabelTest extends TestCase
         $response->assertUnauthorized();
         $this->assertTrue($existed_records_count == $task->labels()->count());
     }
+
+    public function testAuthenticatedUserCanNotAddAttachedLabelToTaskAgain()
+    {
+        $user = factory(User::class)->create();
+        $token = $user->createToken('test-token');
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $label = factory(Label::class)->create();
+        $task->labels()->attach($label->id);
+        $existed_records_count = $task->labels()->count();
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_add, ['task_id' => $task->id, 'label_id' => $label->id]);
+        $response->assertStatus(HttpStatus::BadRequest)->assertJsonFragment(['errors' => ['label_id' => ['The label has already been attached.']]]);
+        $this->assertTrue($existed_records_count == $task->labels()->count());
+    }
 }

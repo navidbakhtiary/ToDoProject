@@ -42,6 +42,6 @@ class TaskLabelUniqueRule implements Rule
      */
     public function message()
     {
-        return trans('validation.unique');
+        return trans('The label has already been attached.');
     }
 }
