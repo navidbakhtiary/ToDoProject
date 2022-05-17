@@ -159,4 +159,51 @@ class TaskTest extends TestCase
         );
     }
 
+    public function testSubListOfLabelsInAuthenticatedUserTasksListNotIncludeNumberOfOtherUsersTasks()
+    {
+        $user_a = factory(User::class)->create();
+        $user_b = factory(User::class)->create();
+        $label_1 = factory(Label::class)->create();
+        $label_2 = factory(Label::class)->create();
+        $label_3 = factory(Label::class)->create();
+        $token_a = $user_a->createToken('test-token');
+        $task_a1 = $user_a->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_a2 = $user_a->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_b1 = $user_b->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_a1->labels()->sync([$label_1->id, $label_2->id]);
+        $task_a2->labels()->sync([$label_1->id, $label_3->id]);
+        $task_b1->labels()->sync([$label_1->id, $label_2->id, $label_3->id]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_a->plainTextToken])->getJson($this->api_list);
+        $response->assertOk()->assertExactJson(
+            [
+                'data' =>
+                [
+                    'tasks' =>
+                    [
+                        [
+                            'id' => $task_a1->id,
+                            'title' => $task_a1->title,
+                            'description' => $task_a1->description,
+                            'labels' =>
+                            [
+                                ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2],
+                                ['id' => $label_2->id, 'name' => $label_2->name, 'tasks count' => 1],
+                            ]
+                        ],
+                        [
+                            'id' => $task_a2->id,
+                            'title' => $task_a2->title,
+                            'description' => $task_a2->description,
+                            'labels' =>
+                            [
+                                ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2],
+                                ['id' => $label_3->id, 'name' => $label_3->name, 'tasks count' => 1]
+                            ]
+                        ],
+                    ]
+                ]
+            ]
+        );
+    }
+
 }
