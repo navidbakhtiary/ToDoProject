@@ -206,4 +206,17 @@ class TaskTest extends TestCase
         );
     }
 
+    public function testUnauthenticatedUserCanNotGetTasksList()
+    {
+        $user = factory(User::class)->create();
+        $task_1 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_2 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $label_1 = factory(Label::class)->create();
+        $label_2 = factory(Label::class)->create();
+        $task_1->labels()->attach($label_1->id);
+        $task_2->labels()->sync([$label_1->id, $label_2->id]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->getJson($this->api_list);
+        $response->assertUnauthorized()->assertJsonMissing(['data' => ['tasks' => []]]);
+    }
+
 }
