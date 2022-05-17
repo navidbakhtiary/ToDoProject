@@ -14,6 +14,7 @@ class TaskTest extends TestCase
 
     private $api_add = '/todo/task/add';
     private $api_edit = '/todo/task/edit';
+    private $api_list = '/todo/task';
     private $api_status_switching = '/todo/task/status/switch';
     private $bearer_prefix = 'Bearer ';
 
@@ -114,6 +115,48 @@ class TaskTest extends TestCase
         $response->assertStatus(HttpStatus::BadRequest)->
             assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
         $this->assertDatabaseHas('tasks', ['id' => $task_2->id, 'status' => 'Open']);
+    }
+
+    public function testAuthenticatedUserCanGetListOfTasks()
+    {
+        $user = factory(User::class)->create();
+        $token = $user->createToken('test-token');
+        $task_1 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_2 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $label_1 = factory(Label::class)->create();
+        $label_2 = factory(Label::class)->create();
+        $task_1->labels()->attach($label_1->id);
+        $task_2->labels()->sync([$label_1->id, $label_2->id]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->getJson($this->api_list);
+        $response->assertOk()->assertExactJson(
+            [
+                'data' =>
+                [
+                    'tasks' =>
+                    [
+                        [
+                            'id' => $task_1->id,
+                            'title' => $task_1->title,
+                            'description' => $task_1->description,
+                            'labels' => 
+                            [
+                                ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2]
+                            ]
+                        ],
+                        [
+                            'id' => $task_2->id,
+                            'title' => $task_2->title,
+                            'description' => $task_2->description,
+                            'labels' =>
+                            [
+                                ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2],
+                                ['id' => $label_2->id, 'name' => $label_2->name, 'tasks count' => 1]
+                            ]
+                        ],  
+                    ]
+                ]
+            ]
+        );
     }
 
 }
