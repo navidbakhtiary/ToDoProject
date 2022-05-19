@@ -2,10 +2,12 @@
 
 namespace NavidBakhtiary\ToDo\Tests\Feature;
 
-use App\Models\User;
+use App\Models\User as AppUser;
+use NavidBakhtiary\ToDo\Models\User;
 use NavidBakhtiary\ToDo\Models\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use NavidBakhtiary\ToDo\Config\HttpStatus;
+use NavidBakhtiary\ToDo\Models\Label;
 use Tests\TestCase;
 
 class TaskTest extends TestCase
@@ -20,8 +22,9 @@ class TaskTest extends TestCase
 
     public function testCreateTaskByAuthenticatedUser()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
         $task = factory(Task::class)->make();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
             postJson($this->api_add, $task->toArray());
@@ -31,13 +34,13 @@ class TaskTest extends TestCase
 
     public function testAuthenticatedUserCanNotCreateTaskUsingInvalidInputData()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
         $task = factory(Task::class)->make();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
             postJson($this->api_add, ['description' => $task->description, 'status' => 'Unknown']);
-        $response->assertStatus(HttpStatus::BadRequest)->
-            assertJsonFragment(['title' => ["The title field is required."], 'status' => ['The selected status is invalid.']]);
+        $response->assertStatus(HttpStatus::BadRequest)->assertJsonFragment(['title' => ["The title field is required."], 'status' => ['The selected status is invalid.']]);
         $this->assertDatabaseMissing('tasks', ['user_id' => $user->id, 'title' => null, 'status' => 'Unknown']);
     }
 
@@ -47,15 +50,16 @@ class TaskTest extends TestCase
         $existed_records_count = Task::count();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
             postJson($this->api_add, $task->toArray());
-        
+
         $response->assertUnauthorized();
         $this->assertTrue($existed_records_count == Task::count());
     }
 
     public function testAuthenticatedUserCanEditInformationOfOwnTask()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
         $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $alternative_task = factory(Task::class)->make();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
@@ -68,59 +72,56 @@ class TaskTest extends TestCase
 
     public function testAuthenticatedUserCanNotEditInformationOfOtherUserTask()
     {
-        $user_1 = factory(User::class)->create();
-        $user_2 = factory(User::class)->create();
-        $token_1 = $user_1->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token_1 = $app_user->createToken('test-token');
+        $user_1 = new User($app_user);
+        $user_2 = new User(factory(AppUser::class)->create());
         $task_2 = $user_2->tasks()->create(factory(Task::class)->make()->toArray());
         $alternative_task = factory(Task::class)->make();
-        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->
-            postJson($this->api_edit, array_merge(['task_id' => $task_2->id], $alternative_task->toArray()));
-        $response->assertStatus(HttpStatus::BadRequest)->
-            assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->postJson($this->api_edit, array_merge(['task_id' => $task_2->id], $alternative_task->toArray()));
+        $response->assertStatus(HttpStatus::BadRequest)->assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
         $this->assertDatabaseHas('tasks', array_merge(['user_id' => $user_2->id], $task_2->toArray()));
     }
 
     public function testAuthenticatedUserCanNotEditInformationUsingInvalidInputData()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
         $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
-        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
-            postJson($this->api_edit, ['task_id' => $task->id, 'title' => '', 'description' => null]);
-        $response->assertStatus(HttpStatus::BadRequest)->
-            assertJsonFragment(['title' => ["The title field is required."], 'description' => ["The description field is required."]]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->postJson($this->api_edit, ['task_id' => $task->id, 'title' => '', 'description' => null]);
+        $response->assertStatus(HttpStatus::BadRequest)->assertJsonFragment(['title' => ["The title field is required."], 'description' => ["The description field is required."]]);
         $this->assertDatabaseMissing('tasks', ['id' => $task->id, 'user_id' => $user->id, 'title' => '', 'description' => null]);
     }
 
     public function testAuthenticatedUserCanChangeStatusOfOwnTask()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
-        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());//status is Open
-        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
-            postJson($this->api_status_switching, ['task_id' => $task->id]);
-        $response->assertCreated()->
-            assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => 'Close']);
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray()); //status is Open
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->postJson($this->api_status_switching, ['task_id' => $task->id]);
+        $response->assertCreated()->assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => 'Close']);
         $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => 'Close']);
     }
 
     public function testAuthenticatedUserCanNotChangeStatusOfOtherUserTask()
     {
-        $user_1 = factory(User::class)->create();
-        $user_2 = factory(User::class)->create();
-        $token_1 = $user_1->createToken('test-token');
-        $task_2 = $user_2->tasks()->create(factory(Task::class)->make()->toArray());//status is Open
-        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->
-            postJson($this->api_status_switching, ['task_id' => $task_2->id]);
-        $response->assertStatus(HttpStatus::BadRequest)->
-            assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
+        $app_user = factory(AppUser::class)->create();
+        $token_1 = $app_user->createToken('test-token');
+        $user_1 = new User($app_user);
+        $user_2 = new User(factory(AppUser::class)->create());
+        $task_2 = $user_2->tasks()->create(factory(Task::class)->make()->toArray()); //status is Open
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->postJson($this->api_status_switching, ['task_id' => $task_2->id]);
+        $response->assertStatus(HttpStatus::BadRequest)->assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
         $this->assertDatabaseHas('tasks', ['id' => $task_2->id, 'status' => 'Open']);
     }
 
     public function testAuthenticatedUserCanGetListOfTasks()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
         $task_1 = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $task_2 = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $label_1 = factory(Label::class)->create();
@@ -138,7 +139,7 @@ class TaskTest extends TestCase
                             'id' => $task_1->id,
                             'title' => $task_1->title,
                             'description' => $task_1->description,
-                            'labels' => 
+                            'labels' =>
                             [
                                 ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2]
                             ]
@@ -152,7 +153,7 @@ class TaskTest extends TestCase
                                 ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2],
                                 ['id' => $label_2->id, 'name' => $label_2->name, 'tasks count' => 1]
                             ]
-                        ],  
+                        ],
                     ]
                 ]
             ]
@@ -161,12 +162,13 @@ class TaskTest extends TestCase
 
     public function testSubListOfLabelsInAuthenticatedUserTasksListNotIncludeNumberOfOtherUsersTasks()
     {
-        $user_a = factory(User::class)->create();
-        $user_b = factory(User::class)->create();
+        $app_user = factory(AppUser::class)->create();
+        $token_a = $app_user->createToken('test-token');
+        $user_a = new User($app_user);
+        $user_b = new User(factory(AppUser::class)->create());
         $label_1 = factory(Label::class)->create();
         $label_2 = factory(Label::class)->create();
         $label_3 = factory(Label::class)->create();
-        $token_a = $user_a->createToken('test-token');
         $task_a1 = $user_a->tasks()->create(factory(Task::class)->make()->toArray());
         $task_a2 = $user_a->tasks()->create(factory(Task::class)->make()->toArray());
         $task_b1 = $user_b->tasks()->create(factory(Task::class)->make()->toArray());
@@ -208,7 +210,7 @@ class TaskTest extends TestCase
 
     public function testUnauthenticatedUserCanNotGetTasksList()
     {
-        $user = factory(User::class)->create();
+        $user = new User(factory(AppUser::class)->create());
         $task_1 = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $task_2 = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $label_1 = factory(Label::class)->create();
@@ -218,5 +220,4 @@ class TaskTest extends TestCase
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->getJson($this->api_list);
         $response->assertUnauthorized()->assertJsonMissing(['data' => ['tasks' => []]]);
     }
-
 }

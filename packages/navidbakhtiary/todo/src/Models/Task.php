@@ -2,7 +2,7 @@
 
 namespace NavidBakhtiary\ToDo\Models;
 
-use App\Models\User;
+use App\Models\User as AppUser;
 use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
@@ -18,6 +18,6 @@ class Task extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(AppUser::class);
     }
 }

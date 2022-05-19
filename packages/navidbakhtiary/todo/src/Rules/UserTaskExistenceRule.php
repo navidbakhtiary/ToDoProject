@@ -4,6 +4,7 @@ namespace NavidBakhtiary\ToDo\Rules;
 
 use Illuminate\Contracts\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use NavidBakhtiary\ToDo\Models\User;
 
 class UserTaskExistenceRule implements Rule
 {
@@ -26,7 +27,7 @@ class UserTaskExistenceRule implements Rule
      */
     public function passes($attribute, $value)
     {
-        $user = Auth::user();
+        $user = new User(Auth::user());
         if($user->tasks()->find($value))
         {
             return true;

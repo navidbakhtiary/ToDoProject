@@ -2,7 +2,8 @@
 
 namespace NavidBakhtiary\ToDo\Tests\Feature;
 
-use App\Models\User;
+use App\Models\User as AppUser;
+use NavidBakhtiary\ToDo\Models\User;
 use NavidBakhtiary\ToDo\Models\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use NavidBakhtiary\ToDo\Config\HttpStatus;
@@ -18,35 +19,35 @@ class TaskLabelTest extends TestCase
 
     public function testAddLabelToTaskByAuthenticatedUser()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
         $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $label = factory(Label::class)->create();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
             postJson($this->api_add, ['task_id' => $task->id, 'label_id' => $label->id]);
-        $response->assertCreated()->
-            assertJsonStructure(['data' => ['task label' => ['task' => ['user' => ['id', 'name'], 'title', 'description', 'status'], 'new label' => ['id', 'name']]]]);
+        $response->assertCreated()->assertJsonStructure(['data' => ['task label' => ['task' => ['user' => ['id', 'name'], 'title', 'description', 'status'], 'new label' => ['id', 'name']]]]);
         $this->assertDatabaseHas('task_label', ['task_id' => $task->id, 'label_id' => $label->id]);
     }
 
     public function testAuthenticatedUserCanNotAddLabelToOtherUserTask()
     {
-        $user_1 = factory(User::class)->create();
-        $user_2 = factory(User::class)->create();
-        $token_1 = $user_1->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token_1 = $app_user->createToken('test-token');
+        $user_1 = new User($app_user);
+        $user_2 = new User(factory(AppUser::class)->create());
         $task_2 = $user_2->tasks()->create(factory(Task::class)->make()->toArray());
         $label = factory(Label::class)->create();
         $existed_records_count = $task_2->labels()->count();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->
             postJson($this->api_add, ['task_id' => $task_2->id, 'label_id' => $label->id]);
-        $response->assertStatus(HttpStatus::BadRequest)->
-            assertJsonFragment(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
+        $response->assertStatus(HttpStatus::BadRequest)->assertJsonFragment(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
         $this->assertTrue($existed_records_count == $task_2->labels()->count());
     }
 
     public function testUnauthenticatedUserCanNotAddLabelToTask()
     {
-        $user = factory(User::class)->create();
+        $user = new User(factory(AppUser::class)->create());
         $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $label = factory(Label::class)->create();
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
@@ -58,8 +59,9 @@ class TaskLabelTest extends TestCase
 
     public function testAuthenticatedUserCanNotAddAttachedLabelToTaskAgain()
     {
-        $user = factory(User::class)->create();
-        $token = $user->createToken('test-token');
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
         $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
         $label = factory(Label::class)->create();
         $task->labels()->attach($label->id);

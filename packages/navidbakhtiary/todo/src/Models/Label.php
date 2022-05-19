@@ -16,6 +16,7 @@ class Label extends Model
 
     public function userTasks()
     {
-        return $this->tasks()->where('user_id', Auth::user()->id);
+        $user = new User(Auth::user());
+        return $this->tasks()->where('user_id', $user->id);
     }
 }
