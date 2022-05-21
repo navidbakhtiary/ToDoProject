@@ -17,6 +17,7 @@ class TaskTest extends TestCase
     private $api_add = '/todo/task/add';
     private $api_edit = '/todo/task/edit';
     private $api_list = '/todo/task';
+    private $api_details = '/todo/task/';
     private $api_status_switching = '/todo/task/status/switch';
     private $bearer_prefix = 'Bearer ';
 
@@ -219,5 +220,28 @@ class TaskTest extends TestCase
         $task_2->labels()->sync([$label_1->id, $label_2->id]);
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->getJson($this->api_list);
         $response->assertUnauthorized()->assertJsonMissing(['data' => ['tasks' => []]]);
+    }
+
+    public function testAuthenticatedUserCanGetDetailsOfOwnTask()
+    {
+        $app_user = factory(AppUser::class)->create();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            getJson($this->api_details . $task->id);
+        $response->assertOk()->assertExactJson([
+            'data' => 
+            [
+                'task' => 
+                [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'created at' => $task->created_at,
+                    'last updated at' => $task->updated_at,
+                ]
+            ]]);
     }
 }
