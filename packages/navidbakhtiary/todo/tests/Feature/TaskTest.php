@@ -242,6 +242,19 @@ class TaskTest extends TestCase
                     'created at' => $task->created_at,
                     'last updated at' => $task->updated_at,
                 ]
-            ]]);
+            ]
+        ]);
+    }
+
+    public function testAuthenticatedUserCanNotGetDetailsOfOtherUserTask()
+    {
+        $app_user = factory(AppUser::class)->create();
+        $token_1 = $app_user->createToken('test-token');
+        $user_1 = new User($app_user);
+        $user_2 = new User(factory(AppUser::class)->create());
+        $task_2 = $user_2->tasks()->create(factory(Task::class)->make()->toArray());
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token_1->plainTextToken])->
+            getJson($this->api_details . $task_2->id);
+        $response->assertStatus(HttpStatus::BadRequest)->assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
     }
 }
