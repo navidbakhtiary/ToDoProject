@@ -7,13 +7,24 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use NavidBakhtiary\ToDo\Models\Task;
+use NavidBakhtiary\ToDo\Models\User;
 use NavidBakhtiary\ToDo\Responses\BadRequestResponse;
 use NavidBakhtiary\ToDo\Responses\CreatedResponse;
+use NavidBakhtiary\ToDo\Responses\OkResponse;
 use NavidBakhtiary\ToDo\Responses\UnprocessableEntityResponse;
 use NavidBakhtiary\ToDo\Rules\UserTaskExistenceRule;
 
 class TaskController extends Controller
 {
+    public function index()
+    {
+        $user = new User(Auth::user());
+        $tasks = $user->tasks()->with(['labels' => function($query){
+                $query->withCount('userTasks');
+            }])->get();
+        return OkResponse::sendUserTasks($tasks);
+    }
+
     public function store(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -25,7 +36,7 @@ class TaskController extends Controller
         {
             return BadRequestResponse::sendErrors($validation->errors()->messages());
         }
-        $user = Auth::user();
+        $user = new User(Auth::user());
         if($task = $user->tasks()->create($request->all()))
         {
             return CreatedResponse::sendTask($task);
