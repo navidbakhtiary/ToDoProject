@@ -227,20 +227,31 @@ class TaskTest extends TestCase
         $app_user = factory(AppUser::class)->create();
         $token = $app_user->createToken('test-token');
         $user = new User($app_user);
-        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_1 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $task_2 = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $label_1 = factory(Label::class)->create();
+        $label_2 = factory(Label::class)->create();
+        $task_1->labels()->attach($label_1->id);
+        $task_2->labels()->sync([$label_1->id, $label_2->id]);
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
-            getJson($this->api_details . $task->id);
+            getJson($this->api_details . $task_2->id);
         $response->assertOk()->assertExactJson([
             'data' => 
             [
                 'task' => 
                 [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'description' => $task->description,
-                    'status' => $task->status,
-                    'created at' => $task->created_at,
-                    'last updated at' => $task->updated_at,
+                    'id' => $task_2->id,
+                    'title' => $task_2->title,
+                    'description' => $task_2->description,
+                    'status' => $task_2->status,
+                    'created at' => $task_2->created_at,
+                    'last updated at' => $task_2->updated_at,
+                    'labels' =>
+                    [
+                        ['id' => $label_1->id, 'name' => $label_1->name, 'tasks count' => 2],
+                        ['id' => $label_2->id, 'name' => $label_2->name, 'tasks count' => 1]
+                    ]
+
                 ]
             ]
         ]);
