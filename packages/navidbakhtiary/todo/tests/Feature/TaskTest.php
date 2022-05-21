@@ -268,4 +268,13 @@ class TaskTest extends TestCase
             getJson($this->api_details . $task_2->id);
         $response->assertStatus(HttpStatus::BadRequest)->assertExactJson(['errors' => ['task_id' => ['The selected task id is invalid.']]]);
     }
+
+    public function testUnauthenticatedUserCanNotGetDetailsOfTask()
+    {
+        $user = new User(factory(AppUser::class)->create());
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray());
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
+            getJson($this->api_details . $task->id);
+        $response->assertUnauthorized()->assertJsonMissing(['data' => ['task' => []]]);
+    }
 }
