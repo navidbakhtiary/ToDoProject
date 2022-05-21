@@ -160,7 +160,7 @@ class TaskTest extends TestCase
         );
     }
 
-    public function testSubListOfLabelsInAuthenticatedUserTasksListNotIncludeNumberOfOtherUsersTasks()
+    public function testLabelsSubListInAuthenticatedUserTasksListNotIncludeNumberOfOtherUsersTasks()
     {
         $app_user = factory(AppUser::class)->create();
         $token_a = $app_user->createToken('test-token');
