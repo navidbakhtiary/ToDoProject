@@ -20,6 +20,6 @@ $factory->define(Task::class, function (Faker $faker) {
     return [
         'title' => $faker->sentence,
         'description' => $faker->paragraph,
-        'status' => 'Open'
+        'status' => Task::$status_open
     ];
 });

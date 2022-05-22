@@ -44,7 +44,7 @@ class TaskController extends Controller
         $validation = Validator::make($request->all(), [
             'title' => 'required|string',
             'description' => 'required|string|max:500', 
-            'status' => 'in:Open,Close',
+            'status' => 'in:' . Task::$status_open . ',' . Task::$status_close,
         ]);
         if ($validation->fails()) 
         {

@@ -102,8 +102,8 @@ class TaskTest extends TestCase
         $user = new User($app_user);
         $task = $user->tasks()->create(factory(Task::class)->make()->toArray()); //status is Open
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->postJson($this->api_status_switching, ['task_id' => $task->id]);
-        $response->assertCreated()->assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => 'Close']);
-        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => 'Close']);
+        $response->assertCreated()->assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => Task::$status_close]);
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => Task::$status_close]);
     }
 
     public function testAuthenticatedUserCanNotChangeStatusOfOtherUserTask()

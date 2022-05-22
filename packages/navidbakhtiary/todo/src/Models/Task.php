@@ -9,7 +9,8 @@ class Task extends Model
 {
     protected $fillable = ['title', 'description', 'status'];
 
-    public static $statuses = ['Close', 'Open'];
+    public static $status_close = 'Close';
+    public static $status_open = 'Open';
 
     public function labels()
     {
