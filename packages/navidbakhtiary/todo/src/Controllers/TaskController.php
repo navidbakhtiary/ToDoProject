@@ -16,6 +16,20 @@ use NavidBakhtiary\ToDo\Rules\UserTaskExistenceRule;
 
 class TaskController extends Controller
 {
+    public function details($id)
+    {
+        $validation = Validator::make(['task_id' => $id], [
+            'task_id' => ['required', 'integer', new UserTaskExistenceRule()]
+        ]);
+        if ($validation->fails()) {
+            return BadRequestResponse::sendErrors($validation->errors()->messages());
+        }
+        $task = Task::with(['labels' => function ($query) {
+                $query->withCount('userTasks');
+            }])->find($id);
+        return OkResponse::sendTaskDetails($task);
+    }
+
     public function index()
     {
         $user = new User(Auth::user());
