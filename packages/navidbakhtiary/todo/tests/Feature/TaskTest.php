@@ -6,8 +6,10 @@ use App\Models\User as AppUser;
 use NavidBakhtiary\ToDo\Models\User;
 use NavidBakhtiary\ToDo\Models\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use NavidBakhtiary\ToDo\Config\HttpStatus;
 use NavidBakhtiary\ToDo\Models\Label;
+use NavidBakhtiary\ToDo\Notifications\TaskStatusClosed;
 use Tests\TestCase;
 
 class TaskTest extends TestCase
@@ -97,13 +99,18 @@ class TaskTest extends TestCase
 
     public function testAuthenticatedUserCanChangeStatusOfOwnTask()
     {
-        $app_user = factory(AppUser::class)->create();
+        $app_user = factory(AppUser::class)->make();
+        $app_user->email = 'navidbakhtiary@yahoo.com';
+        $app_user->save();
         $token = $app_user->createToken('test-token');
         $user = new User($app_user);
         $task = $user->tasks()->create(factory(Task::class)->make()->toArray()); //status is Open
-        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->postJson($this->api_status_switching, ['task_id' => $task->id]);
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_status_switching, ['task_id' => $task->id]);
         $response->assertCreated()->assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => Task::$status_close]);
         $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => Task::$status_close]);
+        //To check that an email is sent, you must check the mailtrap.io inbox
+        $this->assertDatabaseHas('notifications', ['type' => TaskStatusClosed::class, 'notifiable_type' => Task::class, 'notifiable_id' => $task->id]);
     }
 
     public function testAuthenticatedUserCanNotChangeStatusOfOtherUserTask()
@@ -276,5 +283,53 @@ class TaskTest extends TestCase
         $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . hash('sha256', 'fake token')])->
             getJson($this->api_details . $task->id);
         $response->assertUnauthorized()->assertJsonMissing(['data' => ['task' => []]]);
+    }
+
+    public function testSendEmailNotificationWhenUserChangeStatusOfOwnTask()
+    {
+        Notification::fake();
+
+        $app_user = factory(AppUser::class)->create();
+        $user = new User($app_user);
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray()); //status is Open
+        $task->status = Task::$status_close;
+        $task->save();
+
+        Notification::assertNothingSent();
+
+        $task->notify(new TaskStatusClosed());
+        
+        Notification::assertSentTo(
+            $task,
+            TaskStatusClosed::class,
+            function ($notification) use ($user, $task) {
+                $mail_data = $notification->toMail($task)->introLines;
+                $db_data = $notification->toArray($task);
+                $this->assertContains('One of your tasks has been closed.', $mail_data);
+                $this->assertContains('Title of task: ' . $task->title, $mail_data);
+                $this->assertContains($user->name, $db_data['task notification']['task owner']);
+                return $db_data['task notification']['task']['id'] === $task->id;
+            }
+        );
+
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => Task::$status_close]);
+    }
+
+    public function testEmailWillNotSentWhenAuthenticatedUserChangeTaskStatusToOpen()
+    {
+        $app_user = factory(AppUser::class)->make();
+        $app_user->email = 'navidbakhtiary@yahoo.com';
+        $app_user->save();
+        $token = $app_user->createToken('test-token');
+        $user = new User($app_user);
+        $task = $user->tasks()->create(factory(Task::class)->make()->toArray()); //status is Open
+        $task->status = Task::$status_close;
+        $task->save();
+        $response = $this->withHeaders(['Authorization' => $this->bearer_prefix . $token->plainTextToken])->
+            postJson($this->api_status_switching, ['task_id' => $task->id]);
+        $response->assertCreated()->assertJsonFragment(['user' => ['id' => $user->id, 'name' => $user->name], 'id' => $task->id, 'status' => Task::$status_open]);
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'status' => Task::$status_open]);
+        //To check that an email is not sent, you must check the mailtrap.io inbox
+        $this->assertDatabaseCount('notifications', 0);
     }
 }
