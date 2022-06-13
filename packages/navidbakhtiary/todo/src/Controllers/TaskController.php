@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use NavidBakhtiary\ToDo\Models\Task;
 use NavidBakhtiary\ToDo\Models\User;
+use NavidBakhtiary\ToDo\Notifications\TaskStatusClosed;
 use NavidBakhtiary\ToDo\Responses\BadRequestResponse;
 use NavidBakhtiary\ToDo\Responses\CreatedResponse;
 use NavidBakhtiary\ToDo\Responses\OkResponse;
@@ -86,8 +87,11 @@ class TaskController extends Controller
             return BadRequestResponse::sendErrors($validation->errors()->messages());
         }
         $task = Task::find($request->task_id);
-        $new_status = Task::$statuses[abs(array_search($task->status, Task::$statuses) - 1)];
+        $new_status = ($task->status == Task::$status_open) ? Task::$status_close : Task::$status_open;
         if ($task->update(['status' => $new_status])) {
+            if ($new_status == Task::$status_close) {
+                $task->notify(new TaskStatusClosed());
+            }
             return CreatedResponse::sendTask($task);
         }
         return UnprocessableEntityResponse::sendMessage();
