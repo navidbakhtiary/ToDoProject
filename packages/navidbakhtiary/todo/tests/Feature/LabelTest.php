@@ -2,7 +2,7 @@
 
 namespace NavidBakhtiary\ToDo\Tests\Feature;
 
-use App\Models\User as AppUser;
+use App\User as AppUser;
 use NavidBakhtiary\ToDo\Models\User;
 use NavidBakhtiary\ToDo\Models\Label;
 use NavidBakhtiary\ToDo\Models\Task;

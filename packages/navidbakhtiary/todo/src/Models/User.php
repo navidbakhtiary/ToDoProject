@@ -2,7 +2,7 @@
 
 namespace NavidBakhtiary\ToDo\Models;
 
-use App\Models\User as AppUser;
+use App\User as AppUser;
 
 class User extends AppUser
 {

@@ -2,7 +2,7 @@
 
 namespace NavidBakhtiary\ToDo\Models;
 
-use App\Models\User as AppUser;
+use App\User as AppUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 
